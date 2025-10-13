@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "funding_researcher": "./src/funding_researcher/graph.py:graph"
+  },
+  "env": ".env"
+}

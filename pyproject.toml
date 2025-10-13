@@ -1,0 +1,58 @@
+[project]
+name = "funding-research-agent"
+version = "0.1.0"
+description = "Deep research agent for finding Net Zero project funders at regional, national, and global levels"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=0.2.58",
+    "langchain>=0.3.15",
+    "langchain-openai>=0.2.14",
+    "langchain-anthropic>=0.3.2",
+    "langchain-google-genai>=2.0.7",
+    "langchain-groq>=0.2.1",
+    "langchain-community>=0.3.15",
+    "tavily-python>=0.5.0",
+    "duckduckgo-search>=7.1.0",
+    "exa-py>=1.10.3",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.10.3",
+    "pydantic-settings>=2.7.0",
+    "beautifulsoup4>=4.12.3",
+    "requests>=2.32.3",
+    "aiohttp>=3.11.11",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.5",
+    "mypy>=1.14.0",
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "tavily.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "duckduckgo_search.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "exa_py.*"
+ignore_missing_imports = true
