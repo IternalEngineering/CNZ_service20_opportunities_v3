@@ -225,7 +225,7 @@ compress_research_simple_human_message = """All above messages are about researc
 
 DO NOT summarize the information. I want the raw information returned, just in a cleaner format. Make sure all relevant information is preserved - you can rewrite findings verbatim."""
 
-final_report_generation_prompt = """Based on all the research conducted, create a comprehensive, well-structured answer to the overall research brief:
+final_report_generation_prompt = """Based on all the research conducted, create a comprehensive, well thought out PROJECT PROPOSAL for net zero investment opportunities related to the overall research brief:
 <Research Brief>
 {research_brief}
 </Research Brief>
@@ -245,12 +245,41 @@ Here are the findings from the research that you conducted:
 {findings}
 </Findings>
 
-Please create a detailed answer to the overall research brief that:
-1. Is well-organized with proper headings (# for title, ## for sections, ### for subsections)
-2. Includes specific facts and insights from the research
-3. References relevant sources using [Title](URL) format
-4. Provides a balanced, thorough analysis. Be as comprehensive as possible, and include all information that is relevant to the overall research question. People are using you for deep research and will expect detailed, comprehensive answers.
-5. Includes a "Sources" section at the end with all referenced links
+Please create a DETAILED PROJECT PROPOSAL that synthesizes your research into ONE actionable investment opportunity. The proposal should:
+1. Be well-organized with proper headings (# for title, ## for sections, ### for subsections)
+2. Include specific facts, data, and insights from the research to support the proposal
+3. Reference relevant sources using [Title](URL) format
+4. Focus on creating a compelling, evidence-based business case for investment
+5. Include concrete details on implementation, ROI potential, and sustainability impact
+6. Includes a "Sources" section at the end with all referenced links
+
+REQUIRED STRUCTURE for your project proposal:
+## Executive Summary
+Brief overview of the proposed project and key value proposition
+
+## Market Opportunity
+Analysis of the market need, size, and growth potential based on research
+
+## Project Description
+Detailed description of the proposed net zero initiative/investment
+
+## Sustainability Impact
+Quantified environmental benefits (CO2 reduction, energy savings, etc.)
+
+## Financial Analysis
+- Estimated investment required
+- Revenue model and ROI projections
+- Break-even timeline
+- Risk factors
+
+## Implementation Plan
+Key milestones, timeline, and resource requirements
+
+## Competitive Advantage
+What makes this opportunity unique or superior to alternatives
+
+## Conclusion
+Summary of why this is a compelling investment opportunity
 
 You can structure your report in a number of different ways. Here are some examples:
 
