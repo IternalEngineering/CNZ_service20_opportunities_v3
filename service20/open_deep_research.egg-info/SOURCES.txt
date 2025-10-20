@@ -15,8 +15,11 @@ src/legacy/state.py
 src/legacy/utils.py
 src/open_deep_research/configuration.py
 src/open_deep_research/deep_researcher.py
+src/open_deep_research/message_handlers.py
 src/open_deep_research/postgres_tools.py
 src/open_deep_research/prompts.py
+src/open_deep_research/sqs_config.py
+src/open_deep_research/sqs_integration.py
 src/open_deep_research/state.py
 src/open_deep_research/utils.py
 tests/evaluators.py

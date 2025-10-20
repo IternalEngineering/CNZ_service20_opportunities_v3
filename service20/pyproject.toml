@@ -46,6 +46,7 @@ dependencies = [
     "pandas>=2.3.1",
     "asyncpg>=0.29.0",
     "langfuse>=2.0.0",
+    "boto3>=1.35.0",
 ]
 
 [project.optional-dependencies]
