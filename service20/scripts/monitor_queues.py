@@ -31,7 +31,9 @@ class QueueMonitor:
         self.use_cli = use_cli or not HAS_BOTO3
 
         if not self.use_cli:
-            self.sqs = boto3.client('sqs', region_name='eu-west-2')
+            # Get region from environment or default to eu-west-2
+            region = os.getenv('AWS_REGION', 'eu-west-2')
+            self.sqs = boto3.client('sqs', region_name=region)
         else:
             # Verify AWS CLI is installed
             try:

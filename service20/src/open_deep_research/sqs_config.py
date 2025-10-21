@@ -27,6 +27,9 @@ class MessageType(str, Enum):
     RESEARCH_COMPLETE = "research_complete"
     MATCH_REQUEST = "match_request"
     MATCH_RESULT = "match_result"
+    MATCH_FOUND = "match_found"                      # NEW: Successful match proposal
+    MATCH_APPROVAL_NEEDED = "match_approval_needed"  # NEW: Low/medium confidence matches
+    MATCH_STATUS_CHANGE = "match_status_change"      # NEW: Match status updates
 
 
 @dataclass
@@ -37,6 +40,9 @@ class QueueConfig:
     investment_queue_url: Optional[str] = None
     funding_queue_url: Optional[str] = None
     results_queue_url: Optional[str] = None
+    match_requests_queue_url: Optional[str] = None   # NEW: Trigger matching
+    match_results_queue_url: Optional[str] = None    # NEW: Match proposals
+    match_approvals_queue_url: Optional[str] = None  # NEW: Matches needing approval
 
     # AWS configuration
     region: str = "eu-west-2"
@@ -45,6 +51,9 @@ class QueueConfig:
     investment_queue_name: str = "service20-investment-opportunities"
     funding_queue_name: str = "service20-funding-opportunities"
     results_queue_name: str = "service20-research-results"
+    match_requests_queue_name: str = "service20-match-requests"  # NEW
+    match_results_queue_name: str = "service20-match-results"    # NEW
+    match_approvals_queue_name: str = "service20-match-approvals"  # NEW
 
     # Message settings
     visibility_timeout: int = 300  # 5 minutes
@@ -81,6 +90,9 @@ class SQSManager:
         self.config.investment_queue_url = os.getenv('SQS_INVESTMENT_QUEUE_URL')
         self.config.funding_queue_url = os.getenv('SQS_FUNDING_QUEUE_URL')
         self.config.results_queue_url = os.getenv('SQS_RESULTS_QUEUE_URL')
+        self.config.match_requests_queue_url = os.getenv('SQS_MATCH_REQUESTS_QUEUE_URL')
+        self.config.match_results_queue_url = os.getenv('SQS_MATCH_RESULTS_QUEUE_URL')
+        self.config.match_approvals_queue_url = os.getenv('SQS_MATCH_APPROVALS_QUEUE_URL')
 
         # Create queues if URLs not provided
         if not self.config.investment_queue_url:
@@ -98,10 +110,28 @@ class SQSManager:
                 self.config.results_queue_name
             )
 
+        if not self.config.match_requests_queue_url:
+            self.config.match_requests_queue_url = self.create_queue(
+                self.config.match_requests_queue_name
+            )
+
+        if not self.config.match_results_queue_url:
+            self.config.match_results_queue_url = self.create_queue(
+                self.config.match_results_queue_name
+            )
+
+        if not self.config.match_approvals_queue_url:
+            self.config.match_approvals_queue_url = self.create_queue(
+                self.config.match_approvals_queue_name
+            )
+
         logger.info(f"Initialized SQS queues:")
         logger.info(f"  Investment: {self.config.investment_queue_url}")
         logger.info(f"  Funding: {self.config.funding_queue_url}")
         logger.info(f"  Results: {self.config.results_queue_url}")
+        logger.info(f"  Match Requests: {self.config.match_requests_queue_url}")
+        logger.info(f"  Match Results: {self.config.match_results_queue_url}")
+        logger.info(f"  Match Approvals: {self.config.match_approvals_queue_url}")
 
     def create_queue(self, queue_name: str) -> str:
         """Create an SQS queue or get existing queue URL.

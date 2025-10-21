@@ -1,0 +1,557 @@
+"""Intelligent matching engine for discovering synergies between opportunities and funders.
+
+This module implements sophisticated matching algorithms that can:
+1. Find simple 1:1 matches between projects and funders
+2. Bundle multiple city projects to meet investor scale requirements
+3. Calculate compatibility scores based on sector, financial, timeline, and technical alignment
+4. Identify high-confidence matches for automatic notification
+"""
+
+import asyncio
+import json
+import logging
+from datetime import datetime, timedelta
+from itertools import combinations
+from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
+
+
+class CompatibilityScorer:
+    """Calculates compatibility scores for opportunity-funder matches."""
+
+    @staticmethod
+    def calculate_score(
+        funder: Dict[str, Any],
+        opportunities: List[Dict[str, Any]]
+    ) -> Tuple[float, List[str], List[str]]:
+        """Calculate comprehensive compatibility score.
+
+        Args:
+            funder: Funder alert data with criteria
+            opportunities: List of opportunity alert data
+
+        Returns:
+            Tuple of (score, criteria_met, warnings)
+        """
+        score = 0.0
+        criteria_met = []
+        warnings = []
+
+        # Extract funder criteria
+        funder_criteria = funder.get('criteria', {})
+        funder_sector = funder_criteria.get('sector', {})
+        funder_financial = funder_criteria.get('financial', {})
+        funder_timeline = funder_criteria.get('timeline', {})
+
+        # 1. Sector Alignment (30% weight)
+        sector_score, sector_criteria = CompatibilityScorer._score_sector_alignment(
+            funder_sector, opportunities
+        )
+        score += sector_score * 0.30
+        criteria_met.extend(sector_criteria)
+
+        # 2. Financial Fit (25% weight)
+        financial_score, financial_criteria, financial_warnings = CompatibilityScorer._score_financial_fit(
+            funder_financial, opportunities
+        )
+        score += financial_score * 0.25
+        criteria_met.extend(financial_criteria)
+        warnings.extend(financial_warnings)
+
+        # 3. Timeline Compatibility (20% weight)
+        timeline_score, timeline_criteria, timeline_warnings = CompatibilityScorer._score_timeline_compatibility(
+            funder_timeline, opportunities
+        )
+        score += timeline_score * 0.20
+        criteria_met.extend(timeline_criteria)
+        warnings.extend(timeline_warnings)
+
+        # 4. ROI Expectations (15% weight)
+        roi_score, roi_criteria = CompatibilityScorer._score_roi_expectations(
+            funder_financial, opportunities
+        )
+        score += roi_score * 0.15
+        criteria_met.extend(roi_criteria)
+
+        # 5. Technical Compatibility (10% weight)
+        tech_score, tech_criteria = CompatibilityScorer._score_technical_compatibility(
+            funder_criteria.get('technical', {}), opportunities
+        )
+        score += tech_score * 0.10
+        criteria_met.extend(tech_criteria)
+
+        return score, criteria_met, warnings
+
+    @staticmethod
+    def _score_sector_alignment(
+        funder_sector: Dict[str, Any],
+        opportunities: List[Dict[str, Any]]
+    ) -> Tuple[float, List[str]]:
+        """Score sector alignment."""
+        criteria = []
+
+        funder_primary = funder_sector.get('primary', '').lower()
+        if not funder_primary:
+            return 0.5, ['sector_unknown']
+
+        # Check if all opportunities match funder's primary sector
+        all_match = all(
+            opp.get('criteria', {}).get('sector', {}).get('primary', '').lower() == funder_primary
+            for opp in opportunities
+        )
+
+        if all_match:
+            criteria.append('sector_perfect_match')
+            return 1.0, criteria
+
+        # Check if any match
+        any_match = any(
+            opp.get('criteria', {}).get('sector', {}).get('primary', '').lower() == funder_primary
+            for opp in opportunities
+        )
+
+        if any_match:
+            criteria.append('sector_partial_match')
+            return 0.6, criteria
+
+        return 0.2, ['sector_mismatch']
+
+    @staticmethod
+    def _score_financial_fit(
+        funder_financial: Dict[str, Any],
+        opportunities: List[Dict[str, Any]]
+    ) -> Tuple[float, List[str], List[str]]:
+        """Score financial fit including scale requirements."""
+        criteria = []
+        warnings = []
+
+        # Calculate total investment needed
+        total_investment = sum(
+            opp.get('criteria', {}).get('financial', {}).get('amount', 0)
+            for opp in opportunities
+        )
+
+        # Get funder's minimum and available funding
+        minimum_required = funder_financial.get('minimum_required', 0)
+        funding_available = funder_financial.get('amount', 0)
+
+        # Check if meets minimum scale
+        if minimum_required > 0:
+            if total_investment >= minimum_required:
+                criteria.append('minimum_scale_met')
+                score = 1.0
+            elif total_investment >= minimum_required * 0.8:
+                criteria.append('minimum_scale_nearly_met')
+                warnings.append(f'Investment ${total_investment:,.0f} slightly below minimum ${minimum_required:,.0f}')
+                score = 0.7
+            else:
+                warnings.append(f'Investment ${total_investment:,.0f} well below minimum ${minimum_required:,.0f}')
+                score = 0.3
+        else:
+            score = 0.8  # No minimum specified
+
+        # Check if within available funding
+        if funding_available > 0:
+            if total_investment <= funding_available:
+                criteria.append('within_funding_capacity')
+            elif total_investment <= funding_available * 1.2:
+                warnings.append(f'Investment ${total_investment:,.0f} slightly exceeds available ${funding_available:,.0f}')
+            else:
+                warnings.append(f'Investment ${total_investment:,.0f} significantly exceeds available ${funding_available:,.0f}')
+                score *= 0.7
+
+        return score, criteria, warnings
+
+    @staticmethod
+    def _score_timeline_compatibility(
+        funder_timeline: Dict[str, Any],
+        opportunities: List[Dict[str, Any]]
+    ) -> Tuple[float, List[str], List[str]]:
+        """Score timeline compatibility."""
+        criteria = []
+        warnings = []
+
+        # Extract timelines
+        opp_timelines = [
+            opp.get('criteria', {}).get('timeline', {})
+            for opp in opportunities
+        ]
+
+        # Check if all opportunities have similar timelines (within 6 months)
+        execution_starts = [
+            t.get('execution_start', '') for t in opp_timelines if t.get('execution_start')
+        ]
+
+        if len(execution_starts) >= 2:
+            # Check if timelines are aligned (simplified check)
+            all_same_year = len(set(s[:4] for s in execution_starts if len(s) >= 4)) == 1
+            if all_same_year:
+                criteria.append('timeline_aligned')
+                score = 1.0
+            else:
+                warnings.append('Project timelines span multiple years')
+                score = 0.6
+        else:
+            score = 0.7  # Insufficient timeline data
+
+        return score, criteria, warnings
+
+    @staticmethod
+    def _score_roi_expectations(
+        funder_financial: Dict[str, Any],
+        opportunities: List[Dict[str, Any]]
+    ) -> Tuple[float, List[str]]:
+        """Score ROI alignment."""
+        criteria = []
+
+        # Calculate blended ROI
+        total_investment = 0
+        weighted_roi = 0
+
+        for opp in opportunities:
+            opp_financial = opp.get('criteria', {}).get('financial', {})
+            amount = opp_financial.get('amount', 0)
+            roi = opp_financial.get('roi_expected', 0)
+
+            total_investment += amount
+            weighted_roi += amount * roi
+
+        blended_roi = weighted_roi / total_investment if total_investment > 0 else 0
+
+        # Compare with funder expectations
+        funder_roi_min = funder_financial.get('roi_expected', 0)
+
+        if blended_roi >= funder_roi_min:
+            criteria.append('roi_acceptable')
+            if blended_roi >= funder_roi_min * 1.2:
+                criteria.append('roi_exceeds_expectations')
+                return 1.0, criteria
+            return 0.9, criteria
+        elif blended_roi >= funder_roi_min * 0.8:
+            criteria.append('roi_nearly_acceptable')
+            return 0.6, criteria
+        else:
+            return 0.3, criteria
+
+    @staticmethod
+    def _score_technical_compatibility(
+        funder_technical: Dict[str, Any],
+        opportunities: List[Dict[str, Any]]
+    ) -> Tuple[float, List[str]]:
+        """Score technical compatibility."""
+        criteria = []
+
+        # Check if all opportunities use compatible technology
+        technologies = [
+            opp.get('criteria', {}).get('technical', {}).get('technology', '')
+            for opp in opportunities
+        ]
+
+        unique_tech = set(t for t in technologies if t)
+        if len(unique_tech) <= 1:
+            criteria.append('technology_consistent')
+            return 1.0, criteria
+        else:
+            criteria.append('mixed_technologies')
+            return 0.7, criteria
+
+
+class BundleAnalyzer:
+    """Analyzes bundling feasibility and calculates bundle metrics."""
+
+    @staticmethod
+    def calculate_bundle_metrics(opportunities: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Calculate comprehensive bundle metrics.
+
+        Args:
+            opportunities: List of opportunities to bundle
+
+        Returns:
+            Dictionary of bundle metrics
+        """
+        total_investment = 0
+        weighted_roi = 0
+        total_carbon = 0
+        total_capacity = 0
+        countries = set()
+        cities = []
+
+        for opp in opportunities:
+            opp_criteria = opp.get('criteria', {})
+            financial = opp_criteria.get('financial', {})
+            location = opp_criteria.get('location', {})
+            technical = opp_criteria.get('technical', {})
+
+            amount = financial.get('amount', 0)
+            roi = financial.get('roi_expected', 0)
+            carbon = financial.get('carbon_reduction_tons_annually', 0)
+            capacity = technical.get('capacity_mw', 0)
+
+            total_investment += amount
+            weighted_roi += amount * roi
+            total_carbon += carbon
+            total_capacity += capacity
+
+            country = location.get('country', 'Unknown')
+            city = location.get('city', 'Unknown')
+
+            countries.add(country)
+            cities.append(city)
+
+        blended_roi = weighted_roi / total_investment if total_investment > 0 else 0
+
+        return {
+            'total_investment': total_investment,
+            'blended_roi': round(blended_roi, 2),
+            'total_carbon_reduction': total_carbon,
+            'total_capacity_mw': total_capacity,
+            'project_count': len(opportunities),
+            'countries': list(countries),
+            'cities': cities,
+            'geographic_spread': len(countries)
+        }
+
+
+class OpportunityMatcher:
+    """Finds compatible matches between opportunities and funders."""
+
+    def __init__(self, max_bundle_size: int = 5):
+        """Initialize matcher.
+
+        Args:
+            max_bundle_size: Maximum number of opportunities in a bundle
+        """
+        self.max_bundle_size = max_bundle_size
+        self.scorer = CompatibilityScorer()
+        self.analyzer = BundleAnalyzer()
+
+    def find_simple_matches(
+        self,
+        funder: Dict[str, Any],
+        opportunities: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Find simple 1:1 matches.
+
+        Args:
+            funder: Funder alert data
+            opportunities: List of opportunity alerts
+
+        Returns:
+            List of match proposals
+        """
+        matches = []
+
+        for opp in opportunities:
+            score, criteria_met, warnings = self.scorer.calculate_score(funder, [opp])
+
+            if score >= 0.60:  # Minimum threshold
+                match = {
+                    'match_id': f"match-simple-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{opp.get('id', '')[:8]}",
+                    'match_type': 'simple',
+                    'opportunities': [self._extract_opportunity_summary(opp)],
+                    'funders': [self._extract_funder_summary(funder)],
+                    'compatibility_score': round(score, 2),
+                    'confidence_level': self._get_confidence_level(score),
+                    'criteria_met': criteria_met,
+                    'criteria_warnings': warnings,
+                    'bundle_metrics': self.analyzer.calculate_bundle_metrics([opp])
+                }
+                matches.append(match)
+
+        return matches
+
+    def find_bundled_matches(
+        self,
+        funder: Dict[str, Any],
+        opportunities_by_sector: Dict[str, List[Dict[str, Any]]]
+    ) -> List[Dict[str, Any]]:
+        """Find bundled matches (1 funder : N opportunities).
+
+        Args:
+            funder: Funder alert data
+            opportunities_by_sector: Opportunities grouped by sector
+
+        Returns:
+            List of bundled match proposals
+        """
+        matches = []
+
+        funder_criteria = funder.get('criteria', {})
+        funder_sector = funder_criteria.get('sector', {}).get('primary', '').lower()
+        minimum_investment = funder_criteria.get('financial', {}).get('minimum_required', 0)
+
+        # Get opportunities in funder's sector
+        sector_opportunities = opportunities_by_sector.get(funder_sector, [])
+
+        if len(sector_opportunities) < 2:
+            return matches  # Need at least 2 to bundle
+
+        # Try different combinations
+        for size in range(2, min(len(sector_opportunities) + 1, self.max_bundle_size + 1)):
+            for combo in combinations(sector_opportunities, size):
+                # Calculate total investment
+                total = sum(
+                    opp.get('criteria', {}).get('financial', {}).get('amount', 0)
+                    for opp in combo
+                )
+
+                # Check if bundle meets minimum investment
+                if minimum_investment > 0 and total < minimum_investment:
+                    continue
+
+                # Score the bundle
+                score, criteria_met, warnings = self.scorer.calculate_score(funder, list(combo))
+
+                if score >= 0.60:  # Minimum threshold
+                    match = {
+                        'match_id': f"match-bundled-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{len(matches)}",
+                        'match_type': 'bundled',
+                        'opportunities': [self._extract_opportunity_summary(opp) for opp in combo],
+                        'funders': [self._extract_funder_summary(funder)],
+                        'compatibility_score': round(score, 2),
+                        'confidence_level': self._get_confidence_level(score),
+                        'criteria_met': criteria_met,
+                        'criteria_warnings': warnings,
+                        'bundle_metrics': self.analyzer.calculate_bundle_metrics(list(combo))
+                    }
+                    matches.append(match)
+
+        # Sort by score and return top matches
+        matches.sort(key=lambda m: m['compatibility_score'], reverse=True)
+        return matches[:10]  # Limit to top 10 bundles per funder
+
+    def _extract_opportunity_summary(self, opp: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract key opportunity details for match record."""
+        criteria = opp.get('criteria', {})
+        return {
+            'alert_id': opp.get('id'),
+            'research_id': criteria.get('research_id'),
+            'city': criteria.get('location', {}).get('city'),
+            'country': criteria.get('location', {}).get('country'),
+            'sector': criteria.get('sector', {}).get('primary'),
+            'investment_amount': criteria.get('financial', {}).get('amount'),
+            'roi': criteria.get('financial', {}).get('roi_expected'),
+            'carbon_reduction': criteria.get('financial', {}).get('carbon_reduction_tons_annually')
+        }
+
+    def _extract_funder_summary(self, funder: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract key funder details for match record."""
+        criteria = funder.get('criteria', {})
+        return {
+            'alert_id': funder.get('id'),
+            'research_id': criteria.get('research_id'),
+            'sector_interest': criteria.get('sector', {}).get('primary'),
+            'funding_available': criteria.get('financial', {}).get('amount'),
+            'minimum_investment': criteria.get('financial', {}).get('minimum_required'),
+            'roi_expected': criteria.get('financial', {}).get('roi_expected')
+        }
+
+    @staticmethod
+    def _get_confidence_level(score: float) -> str:
+        """Determine confidence level from score."""
+        if score >= 0.80:
+            return 'high'
+        elif score >= 0.60:
+            return 'medium'
+        else:
+            return 'low'
+
+
+class MatchMakerEngine:
+    """Main orchestrator for running matching jobs."""
+
+    def __init__(self):
+        """Initialize matching engine."""
+        self.matcher = OpportunityMatcher()
+        logger.info("Initialized MatchMaker Engine")
+
+    async def run_matching(
+        self,
+        lookback_days: int = 30
+    ) -> List[Dict[str, Any]]:
+        """Run complete matching process.
+
+        Args:
+            lookback_days: How many days back to look for active alerts
+
+        Returns:
+            List of all match proposals found
+        """
+        logger.info(f"Starting matching job (lookback: {lookback_days} days)")
+
+        # Import here to avoid circular dependency
+        from open_deep_research.database_storage import get_research_from_database
+
+        # Fetch active alerts (simplified - in production, query alerts table directly)
+        # For now, we'll use research results as a proxy
+        all_research = await get_research_from_database(limit=100)
+
+        # Separate into opportunities and funders
+        opportunities = []
+        funders = []
+
+        for research in all_research:
+            metadata = research.get('metadata', {})
+            opp_type = metadata.get('opportunity_type', 'unknown')
+
+            # Build alert-like structure
+            alert_data = {
+                'id': research.get('id'),
+                'criteria': metadata.get('opportunity_data', {})
+            }
+
+            if opp_type == 'investment':
+                opportunities.append(alert_data)
+            elif opp_type == 'funding':
+                funders.append(alert_data)
+
+        logger.info(f"Found {len(opportunities)} opportunities and {len(funders)} funders")
+
+        # Group opportunities by sector
+        opportunities_by_sector = {}
+        for opp in opportunities:
+            sector = opp.get('criteria', {}).get('sector', {}).get('primary', 'unknown').lower()
+            if sector not in opportunities_by_sector:
+                opportunities_by_sector[sector] = []
+            opportunities_by_sector[sector].append(opp)
+
+        # Find matches for each funder
+        all_matches = []
+
+        for funder in funders:
+            logger.info(f"Finding matches for funder {funder.get('id')}")
+
+            # Find simple matches
+            simple_matches = self.matcher.find_simple_matches(funder, opportunities)
+            all_matches.extend(simple_matches)
+
+            # Find bundled matches
+            bundled_matches = self.matcher.find_bundled_matches(funder, opportunities_by_sector)
+            all_matches.extend(bundled_matches)
+
+        logger.info(f"Found {len(all_matches)} total matches")
+
+        # Remove duplicates (keep highest scoring match for each combination)
+        all_matches = self._deduplicate_matches(all_matches)
+
+        logger.info(f"After deduplication: {len(all_matches)} unique matches")
+
+        return all_matches
+
+    @staticmethod
+    def _deduplicate_matches(matches: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Remove duplicate matches, keeping highest scoring version."""
+        seen = {}
+
+        for match in matches:
+            # Create key from opportunity and funder IDs
+            opp_ids = sorted([o['alert_id'] for o in match['opportunities']])
+            funder_ids = sorted([f['alert_id'] for f in match['funders']])
+            key = (tuple(opp_ids), tuple(funder_ids))
+
+            # Keep highest scoring match for this combination
+            if key not in seen or match['compatibility_score'] > seen[key]['compatibility_score']:
+                seen[key] = match
+
+        return list(seen.values())
