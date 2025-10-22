@@ -795,3 +795,125 @@ async def store_investment_research(research_data: Dict[str, Any]) -> Optional[i
         import traceback
         traceback.print_exc()
         return None
+
+
+async def store_funding_research(research_data: Dict[str, Any]) -> Optional[int]:
+    """Store funder research results in the service20_funding_opportunities table.
+
+    Args:
+        research_data: Dictionary containing research results and metadata
+            - query: Research query/prompt
+            - research_brief: Brief summary
+            - final_report: Full report
+            - notes: List of research notes
+            - funder_type: Type of funder
+            - geographic_scope: Geographic scope
+            - continent, countries, regions, cities: Geographic arrays
+            - sectors: List of sectors
+            - min_investment, max_investment: Investment range
+            - project_stages: List of project stages
+            - research_iterations: Number of iterations
+            - metadata: Additional metadata
+
+    Returns:
+        Record ID if successful, None otherwise
+    """
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        logger.warning("DATABASE_URL not set - skipping database storage")
+        return None
+
+    try:
+        conn = await asyncpg.connect(database_url)
+
+        # Extract fields with defaults
+        query = research_data.get('query', '')
+        research_brief = research_data.get('research_brief', '')
+        final_report = research_data.get('final_report', '')
+        notes_list = research_data.get('notes', [])
+
+        # Convert notes list to JSONB format
+        import json
+        notes = json.dumps(notes_list) if isinstance(notes_list, list) else notes_list
+
+        # Funder details
+        funder_type = research_data.get('funder_type', 'unknown')
+        geographic_scope = research_data.get('geographic_scope', 'global')
+
+        # Geographic arrays
+        continent = research_data.get('continent') or []
+        countries = research_data.get('countries') or []
+        regions = research_data.get('regions') or []
+        cities = research_data.get('cities') or []
+
+        # Sector and financial
+        sectors = research_data.get('sectors') or []
+        min_investment = research_data.get('min_investment')
+        max_investment = research_data.get('max_investment')
+
+        # Project criteria
+        project_stages = research_data.get('project_stages') or []
+
+        # Metadata
+        research_iterations = research_data.get('research_iterations', 0)
+        metadata_dict = research_data.get('metadata', {})
+        metadata = json.dumps(metadata_dict) if isinstance(metadata_dict, dict) else metadata_dict
+
+        # Insert query
+        insert_query = """
+            INSERT INTO service20_funding_opportunities (
+                query,
+                research_brief,
+                final_report,
+                notes,
+                funder_type,
+                geographic_scope,
+                continent,
+                countries,
+                regions,
+                cities,
+                sectors,
+                min_investment,
+                max_investment,
+                project_stages,
+                research_iterations,
+                metadata,
+                created_at,
+                updated_at
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                $11, $12, $13, $14, $15, $16, NOW(), NOW()
+            )
+            RETURNING id;
+        """
+
+        record_id = await conn.fetchval(
+            insert_query,
+            query,
+            research_brief,
+            final_report,
+            notes,
+            funder_type,
+            geographic_scope,
+            continent,
+            countries,
+            regions,
+            cities,
+            sectors,
+            min_investment,
+            max_investment,
+            project_stages,
+            research_iterations,
+            metadata
+        )
+
+        await conn.close()
+
+        logger.info(f"Stored funding research with ID: {record_id} for {funder_type} ({geographic_scope})")
+        return record_id
+
+    except Exception as e:
+        logger.error(f"Failed to store funding research: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
