@@ -428,8 +428,8 @@ class MatchingAgent:
         cutoff_date = datetime.utcnow() - timedelta(days=lookback_days)
 
         query = """
-            SELECT id, alert_id, alert_type, research_id, criteria,
-                   status, created_at, updated_at
+            SELECT id, user_id, alert_type, research_id, title, description,
+                   criteria, status, created_at, updated_at
             FROM service20_alerts
             WHERE status = 'active'
             AND created_at >= $1
@@ -444,9 +444,11 @@ class MatchingAgent:
         for row in rows:
             alert = {
                 'id': row['id'],
-                'alert_id': row['alert_id'],
+                'user_id': row['user_id'],
                 'alert_type': row['alert_type'],
                 'research_id': row['research_id'],
+                'title': row['title'],
+                'description': row['description'],
                 'criteria': row['criteria'],
                 'status': row['status'],
                 'created_at': row['created_at'],
