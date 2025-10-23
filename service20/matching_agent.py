@@ -457,18 +457,24 @@ class MatchingAgent:
 
             # Also fetch city/country from research if available
             if row['research_id']:
-                research_query = """
-                    SELECT city, country, country_code, sector
-                    FROM service20_investment_opportunities
-                    WHERE id = $1
-                    LIMIT 1;
-                """
-                research_row = await conn.fetchrow(research_query, row['research_id'])
-                if research_row:
-                    alert['city'] = research_row['city']
-                    alert['country'] = research_row['country']
-                    alert['country_code'] = research_row['country_code']
-                    alert['sector'] = research_row['sector']
+                try:
+                    # Try to convert research_id to integer for id lookup
+                    research_id_int = int(row['research_id'])
+                    research_query = """
+                        SELECT city, country, country_code, sector
+                        FROM service20_investment_opportunities
+                        WHERE id = $1
+                        LIMIT 1;
+                    """
+                    research_row = await conn.fetchrow(research_query, research_id_int)
+                    if research_row:
+                        alert['city'] = research_row['city']
+                        alert['country'] = research_row['country']
+                        alert['country_code'] = research_row['country_code']
+                        alert['sector'] = research_row['sector']
+                except (ValueError, TypeError):
+                    # research_id is not a valid integer, skip research lookup
+                    pass
 
             if row['alert_type'] == 'investment':
                 investment_alerts.append(alert)
