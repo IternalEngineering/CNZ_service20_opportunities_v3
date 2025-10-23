@@ -19,6 +19,7 @@ load_dotenv()
 from langchain_core.messages import HumanMessage
 from open_deep_research.deep_researcher import deep_researcher
 from open_deep_research.database_storage import store_investment_research
+from open_deep_research.tracing import initialize_tracing, get_tracer
 
 # Color output
 try:
@@ -144,14 +145,29 @@ async def research_city_opportunity(
 
     print(f"{Fore.YELLOW}Starting deep research...{Style.RESET_ALL}\n")
 
+    # Get tracer for manual spans
+    tracer = get_tracer(__name__)
+
     try:
-        # Run deep research
+        # Run deep research with tracing
         thread_id = f"{city.lower()}-{country_code.lower()}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
-        result = await deep_researcher.ainvoke(
-            {"messages": [HumanMessage(content=research_prompt)]},
-            config={"configurable": {"thread_id": thread_id}}
-        )
+        with tracer.start_as_current_span(
+            name=f"City Research: {city}, {country}",
+            attributes={
+                "research.type": "city_opportunity",
+                "research.city": city,
+                "research.country": country,
+                "research.country_code": country_code,
+                "research.sector": sector,
+                "research.investment_range": investment_range,
+                "research.thread_id": thread_id,
+            }
+        ):
+            result = await deep_researcher.ainvoke(
+                {"messages": [HumanMessage(content=research_prompt)]},
+                config={"configurable": {"thread_id": thread_id}}
+            )
 
         # Extract results
         final_report = result.get("final_report", "")
@@ -268,6 +284,9 @@ Supported Sectors:
     )
 
     args = parser.parse_args()
+
+    # Initialize tracing
+    initialize_tracing("service20-city-research")
 
     # Run research
     success = asyncio.run(research_city_opportunity(

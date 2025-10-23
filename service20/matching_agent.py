@@ -33,6 +33,7 @@ load_dotenv()
 import asyncpg
 
 from open_deep_research.sqs_config import MessageType, get_sqs_manager
+from open_deep_research.tracing import initialize_tracing, get_tracer
 
 # Configure logging
 logging.basicConfig(
@@ -765,57 +766,67 @@ class MatchingAgent:
 
         logger.info(f"Processing match request (lookback: {lookback_days} days)")
 
-        # Fetch active alerts
-        investment_alerts, funding_alerts = await self.get_active_alerts(lookback_days)
+        # Get tracer for manual spans
+        tracer = get_tracer(__name__)
 
-        if not funding_alerts:
-            logger.warning("No active funding alerts found")
-            return True  # Not an error, just nothing to do
+        with tracer.start_as_current_span(
+            name="Matching: Find Compatible Funders",
+            attributes={
+                "matching.lookback_days": lookback_days,
+                "matching.message_id": message.get('message_id'),
+            }
+        ):
+            # Fetch active alerts
+            investment_alerts, funding_alerts = await self.get_active_alerts(lookback_days)
 
-        if not investment_alerts:
-            logger.warning("No active investment alerts found")
+            if not funding_alerts:
+                logger.warning("No active funding alerts found")
+                return True  # Not an error, just nothing to do
+
+            if not investment_alerts:
+                logger.warning("No active investment alerts found")
+                return True
+
+            # Find matches
+            matches = await self.find_matches(investment_alerts, funding_alerts)
+
+            # Send notifications for high-confidence matches
+            high_confidence_count = 0
+            for match in matches:
+                if match['confidence'] == 'high':
+                    # Send notification via SQS
+                    notification_payload = {
+                        'bundle_id': match['bundle_id'],
+                        'opportunities': match['opportunities'],
+                        'score': match['score'],
+                        'type': match['type']
+                    }
+
+                    self.sqs_manager.send_message(
+                        self.sqs_manager.config.match_results_queue_url,
+                        MessageType.MATCH_FOUND,
+                        notification_payload
+                    )
+                    high_confidence_count += 1
+
+            logger.info(f"Sent {high_confidence_count} high-confidence match notifications")
+
+            # Send result message
+            result_payload = {
+                'total_matches': len(matches),
+                'high_confidence': high_confidence_count,
+                'medium_confidence': len([m for m in matches if m['confidence'] == 'medium']),
+                'investment_alerts_processed': len(investment_alerts),
+                'funding_alerts_processed': len(funding_alerts)
+            }
+
+            self.sqs_manager.send_message(
+                self.sqs_manager.config.results_queue_url,
+                MessageType.MATCH_RESULT,
+                result_payload
+            )
+
             return True
-
-        # Find matches
-        matches = await self.find_matches(investment_alerts, funding_alerts)
-
-        # Send notifications for high-confidence matches
-        high_confidence_count = 0
-        for match in matches:
-            if match['confidence'] == 'high':
-                # Send notification via SQS
-                notification_payload = {
-                    'bundle_id': match['bundle_id'],
-                    'opportunities': match['opportunities'],
-                    'score': match['score'],
-                    'type': match['type']
-                }
-
-                self.sqs_manager.send_message(
-                    self.sqs_manager.config.match_results_queue_url,
-                    MessageType.MATCH_FOUND,
-                    notification_payload
-                )
-                high_confidence_count += 1
-
-        logger.info(f"Sent {high_confidence_count} high-confidence match notifications")
-
-        # Send result message
-        result_payload = {
-            'total_matches': len(matches),
-            'high_confidence': high_confidence_count,
-            'medium_confidence': len([m for m in matches if m['confidence'] == 'medium']),
-            'investment_alerts_processed': len(investment_alerts),
-            'funding_alerts_processed': len(funding_alerts)
-        }
-
-        self.sqs_manager.send_message(
-            self.sqs_manager.config.results_queue_url,
-            MessageType.MATCH_RESULT,
-            result_payload
-        )
-
-        return True
 
     async def run(self, poll_interval: int = 20):
         """Run the matching agent (listen for SQS messages).
@@ -867,6 +878,9 @@ class MatchingAgent:
 
 async def main():
     """Main entry point for matching agent."""
+    # Initialize tracing
+    initialize_tracing("service20-matching")
+
     agent = MatchingAgent()
     await agent.run()
 

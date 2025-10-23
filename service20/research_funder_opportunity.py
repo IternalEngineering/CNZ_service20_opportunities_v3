@@ -20,6 +20,7 @@ load_dotenv()
 from langchain_core.messages import HumanMessage
 from open_deep_research.deep_researcher import deep_researcher
 from open_deep_research.database_storage import store_funding_research
+from open_deep_research.tracing import initialize_tracing, get_tracer
 
 # Color output
 try:
@@ -285,6 +286,9 @@ and government funding portals.
 
     print(f"{Fore.YELLOW}Starting deep research...{Style.RESET_ALL}\n")
 
+    # Get tracer for manual spans
+    tracer = get_tracer(__name__)
+
     try:
         # Generate thread ID
         funder_slug = funder_type.replace('_', '-')
@@ -296,14 +300,28 @@ and government funding portals.
 
         thread_id = f"funder-{funder_slug}-{geo_slug}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
-        # Run deep research
+        # Run deep research with tracing
         print(f"{Fore.CYAN}Thread ID: {thread_id}{Style.RESET_ALL}")
         print(f"{Fore.CYAN}Starting research iterations...{Style.RESET_ALL}\n")
 
-        result = await deep_researcher.ainvoke(
-            {"messages": [HumanMessage(content=research_prompt)]},
-            config={"configurable": {"thread_id": thread_id}}
-        )
+        with tracer.start_as_current_span(
+            name=f"Funder Research: {funder_type}",
+            attributes={
+                "research.type": "funder_opportunity",
+                "research.funder_type": funder_type,
+                "research.scope": scope,
+                "research.countries": ','.join(countries) if countries else None,
+                "research.continents": ','.join(continents) if continents else None,
+                "research.sectors": ','.join(sectors) if sectors else None,
+                "research.min_investment": min_investment,
+                "research.max_investment": max_investment,
+                "research.thread_id": thread_id,
+            }
+        ):
+            result = await deep_researcher.ainvoke(
+                {"messages": [HumanMessage(content=research_prompt)]},
+                config={"configurable": {"thread_id": thread_id}}
+            )
 
         # Extract results
         final_report = None
@@ -441,6 +459,9 @@ Examples:
     cities = [c.strip() for c in args.cities.split(',')] if args.cities else None
     sectors = [s.strip() for s in args.sectors.split(',')]
     stages = [s.strip() for s in args.stages.split(',')]
+
+    # Initialize tracing
+    initialize_tracing("service20-funder-research")
 
     # Run research
     asyncio.run(research_funder_opportunity(

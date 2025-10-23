@@ -22,6 +22,10 @@ import os
 
 load_dotenv()
 
+# Add src directory to path for tracing
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+from open_deep_research.tracing import initialize_tracing
+
 # Color output
 try:
     from colorama import init, Fore, Style
@@ -279,6 +283,9 @@ def run_matching_agent() -> Dict:
 
 async def main():
     """Main execution function."""
+    # Initialize tracing
+    initialize_tracing("service20-parallel-research")
+
     print("=" * 80)
     print(f"{Fore.WHITE}{Style.BRIGHT}PARALLEL RESEARCH EXECUTION{Style.RESET_ALL}")
     print("=" * 80)
