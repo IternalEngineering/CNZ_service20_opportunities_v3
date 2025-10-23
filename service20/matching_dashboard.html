@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service20 Matching Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card h3 {
+            color: #718096;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .stat-card .subtitle {
+            color: #a0aec0;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .stat-card.high {
+            border-left: 4px solid #48bb78;
+        }
+
+        .stat-card.medium {
+            border-left: 4px solid #ed8936;
+        }
+
+        .stat-card.bundled {
+            border-left: 4px solid #667eea;
+        }
+
+        .filters {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: 0.85em;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .filter-group select {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .matches-container {
+            display: grid;
+            gap: 25px;
+        }
+
+        .match-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .match-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f7fafc;
+        }
+
+        .match-title {
+            flex: 1;
+        }
+
+        .match-title h2 {
+            color: #2d3748;
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+
+        .match-title .match-id {
+            color: #a0aec0;
+            font-size: 0.9em;
+        }
+
+        .match-score {
+            text-align: right;
+        }
+
+        .score-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: white;
+            margin: 0 auto 5px;
+        }
+
+        .score-circle.high {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+        }
+
+        .score-circle.medium {
+            background: linear-gradient(135deg, #ed8936, #dd6b20);
+        }
+
+        .score-circle.low {
+            background: linear-gradient(135deg, #fc8181, #f56565);
+        }
+
+        .confidence-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .confidence-badge.high {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .confidence-badge.medium {
+            background: #feebc8;
+            color: #7c2d12;
+        }
+
+        .confidence-badge.low {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .match-type-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            background: #e6fffa;
+            color: #234e52;
+            margin-left: 10px;
+        }
+
+        .match-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .opportunities-section, .funders-section {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 2px;
+        }
+
+        .opportunity-item, .funder-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid #667eea;
+        }
+
+        .opportunity-item:last-child, .funder-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .city-name {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 1.1em;
+        }
+
+        .amount {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .item-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            font-size: 0.9em;
+        }
+
+        .detail-item {
+            color: #718096;
+        }
+
+        .detail-value {
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        .bundle-metrics {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .bundle-metrics h3 {
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .metric-item {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        .criteria-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .criteria-met, .criteria-warnings {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .criteria-met h4, .criteria-warnings h4 {
+            margin-bottom: 10px;
+            color: #2d3748;
+            font-size: 0.95em;
+        }
+
+        .criteria-list {
+            list-style: none;
+        }
+
+        .criteria-list li {
+            padding: 5px 0;
+            font-size: 0.9em;
+            color: #718096;
+        }
+
+        .criteria-list li::before {
+            content: '✓ ';
+            color: #48bb78;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .criteria-warnings .criteria-list li::before {
+            content: '⚠ ';
+            color: #ed8936;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f4f6;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #742a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            color: #718096;
+        }
+
+        @media (max-width: 768px) {
+            .match-content {
+                grid-template-columns: 1fr;
+            }
+
+            .criteria-section {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Service20 Matching Dashboard</h1>
+            <p>Intelligent opportunity bundling and funder matching system</p>
+        </div>
+
+        <div class="stats-grid" id="stats">
+            <div class="stat-card high">
+                <h3>High Confidence</h3>
+                <div class="value" id="stat-high">-</div>
+                <div class="subtitle">Auto-notified matches</div>
+            </div>
+            <div class="stat-card medium">
+                <h3>Medium Confidence</h3>
+                <div class="value" id="stat-medium">-</div>
+                <div class="subtitle">Pending approval</div>
+            </div>
+            <div class="stat-card bundled">
+                <h3>Bundled Projects</h3>
+                <div class="value" id="stat-bundled">-</div>
+                <div class="subtitle">Multi-city opportunities</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Investment</h3>
+                <div class="value" id="stat-investment">-</div>
+                <div class="subtitle">Combined value</div>
+            </div>
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label>Confidence Level</label>
+                <select id="filter-confidence">
+                    <option value="all">All Levels</option>
+                    <option value="high" selected>High Confidence</option>
+                    <option value="medium">Medium Confidence</option>
+                    <option value="low">Low Confidence</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Match Type</label>
+                <select id="filter-type">
+                    <option value="all">All Types</option>
+                    <option value="bundled">Bundled</option>
+                    <option value="simple">Simple</option>
+                    <option value="syndicated">Syndicated</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Sort By</label>
+                <select id="filter-sort">
+                    <option value="score">Compatibility Score</option>
+                    <option value="date">Date Created</option>
+                    <option value="investment">Total Investment</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="loadMatches()">Refresh Data</button>
+        </div>
+
+        <div id="content">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Loading matches...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.origin;
+
+        // Mock data for demonstration (replace with actual API calls)
+        const MOCK_MATCHES = [
+            {
+                match_id: "match-bundled-20251021-001",
+                match_type: "bundled",
+                compatibility_score: 0.87,
+                confidence_level: "high",
+                opportunities: [
+                    {
+                        city: "Bristol",
+                        country: "UK",
+                        sector: "solar_energy",
+                        investment_amount: 500000,
+                        roi: 18.5,
+                        carbon_reduction: 150
+                    },
+                    {
+                        city: "Manchester",
+                        country: "UK",
+                        sector: "solar_energy",
+                        investment_amount: 300000,
+                        roi: 17.0,
+                        carbon_reduction: 100
+                    },
+                    {
+                        city: "Edinburgh",
+                        country: "UK",
+                        sector: "solar_energy",
+                        investment_amount: 400000,
+                        roi: 19.0,
+                        carbon_reduction: 120
+                    }
+                ],
+                funders: [
+                    {
+                        research_id: "green-investment-fund-2025",
+                        sector_interest: "solar_energy",
+                        funding_available: 2000000,
+                        minimum_investment: 1000000,
+                        roi_expected: 15.0
+                    }
+                ],
+                bundle_metrics: {
+                    total_investment: 1200000,
+                    blended_roi: 17.8,
+                    total_carbon_reduction: 370,
+                    project_count: 3,
+                    countries: ["UK"],
+                    cities: ["Bristol", "Manchester", "Edinburgh"]
+                },
+                criteria_met: [
+                    "sector_perfect_match",
+                    "minimum_scale_met",
+                    "timeline_aligned",
+                    "roi_acceptable",
+                    "technology_consistent"
+                ],
+                criteria_warnings: [],
+                created_at: "2025-10-21T10:30:00Z"
+            },
+            {
+                match_id: "match-simple-20251021-002",
+                match_type: "simple",
+                compatibility_score: 0.92,
+                confidence_level: "high",
+                opportunities: [
+                    {
+                        city: "London",
+                        country: "UK",
+                        sector: "wind_energy",
+                        investment_amount: 1500000,
+                        roi: 20.0,
+                        carbon_reduction: 500
+                    }
+                ],
+                funders: [
+                    {
+                        research_id: "renewable-ventures-uk",
+                        sector_interest: "wind_energy",
+                        funding_available: 5000000,
+                        minimum_investment: 1000000,
+                        roi_expected: 18.0
+                    }
+                ],
+                bundle_metrics: {
+                    total_investment: 1500000,
+                    blended_roi: 20.0,
+                    total_carbon_reduction: 500,
+                    project_count: 1,
+                    countries: ["UK"],
+                    cities: ["London"]
+                },
+                criteria_met: [
+                    "sector_perfect_match",
+                    "minimum_scale_met",
+                    "roi_exceeds_expectations",
+                    "within_funding_capacity"
+                ],
+                criteria_warnings: [],
+                created_at: "2025-10-21T09:15:00Z"
+            },
+            {
+                match_id: "match-bundled-20251021-003",
+                match_type: "bundled",
+                compatibility_score: 0.72,
+                confidence_level: "medium",
+                opportunities: [
+                    {
+                        city: "Paris",
+                        country: "France",
+                        sector: "solar_energy",
+                        investment_amount: 600000,
+                        roi: 16.0,
+                        carbon_reduction: 180
+                    },
+                    {
+                        city: "Lyon",
+                        country: "France",
+                        sector: "solar_energy",
+                        investment_amount: 450000,
+                        roi: 15.5,
+                        carbon_reduction: 140
+                    }
+                ],
+                funders: [
+                    {
+                        research_id: "eu-green-fund",
+                        sector_interest: "solar_energy",
+                        funding_available: 3000000,
+                        minimum_investment: 1000000,
+                        roi_expected: 14.0
+                    }
+                ],
+                bundle_metrics: {
+                    total_investment: 1050000,
+                    blended_roi: 15.8,
+                    total_carbon_reduction: 320,
+                    project_count: 2,
+                    countries: ["France"],
+                    cities: ["Paris", "Lyon"]
+                },
+                criteria_met: [
+                    "sector_perfect_match",
+                    "minimum_scale_met",
+                    "roi_acceptable"
+                ],
+                criteria_warnings: [
+                    "Timeline spans multiple quarters"
+                ],
+                created_at: "2025-10-21T08:45:00Z"
+            }
+        ];
+
+        let allMatches = [];
+        let currentFilters = {
+            confidence: 'high',
+            type: 'all',
+            sort: 'score'
+        };
+
+        // Load matches (replace with actual API call)
+        async function loadMatches() {
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading matches...</p>
+                </div>
+            `;
+
+            // Simulate API call delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Use mock data (replace with: const response = await fetch('/api/matches'))
+            allMatches = MOCK_MATCHES;
+
+            updateStats();
+            renderMatches();
+        }
+
+        // Update statistics
+        function updateStats() {
+            const stats = {
+                high: allMatches.filter(m => m.confidence_level === 'high').length,
+                medium: allMatches.filter(m => m.confidence_level === 'medium').length,
+                bundled: allMatches.filter(m => m.match_type === 'bundled').length,
+                totalInvestment: allMatches.reduce((sum, m) => sum + (m.bundle_metrics?.total_investment || 0), 0)
+            };
+
+            document.getElementById('stat-high').textContent = stats.high;
+            document.getElementById('stat-medium').textContent = stats.medium;
+            document.getElementById('stat-bundled').textContent = stats.bundled;
+            document.getElementById('stat-investment').textContent = formatCurrency(stats.totalInvestment);
+        }
+
+        // Render matches
+        function renderMatches() {
+            let filtered = allMatches;
+
+            // Apply filters
+            if (currentFilters.confidence !== 'all') {
+                filtered = filtered.filter(m => m.confidence_level === currentFilters.confidence);
+            }
+            if (currentFilters.type !== 'all') {
+                filtered = filtered.filter(m => m.match_type === currentFilters.type);
+            }
+
+            // Sort
+            filtered.sort((a, b) => {
+                if (currentFilters.sort === 'score') {
+                    return b.compatibility_score - a.compatibility_score;
+                } else if (currentFilters.sort === 'date') {
+                    return new Date(b.created_at) - new Date(a.created_at);
+                } else if (currentFilters.sort === 'investment') {
+                    return (b.bundle_metrics?.total_investment || 0) - (a.bundle_metrics?.total_investment || 0);
+                }
+                return 0;
+            });
+
+            const contentDiv = document.getElementById('content');
+
+            if (filtered.length === 0) {
+                contentDiv.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <h3>No matches found</h3>
+                        <p>Try adjusting your filters or check back later for new matches.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            contentDiv.innerHTML = `
+                <div class="matches-container">
+                    ${filtered.map(match => renderMatchCard(match)).join('')}
+                </div>
+            `;
+        }
+
+        // Render individual match card
+        function renderMatchCard(match) {
+            const scorePercent = Math.round(match.compatibility_score * 100);
+
+            return `
+                <div class="match-card">
+                    <div class="match-header">
+                        <div class="match-title">
+                            <h2>${match.match_type === 'bundled' ? '📦 Bundled' : '🎯 Simple'} Match</h2>
+                            <div class="match-id">${match.match_id}</div>
+                            <div style="margin-top: 10px;">
+                                <span class="confidence-badge ${match.confidence_level}">${match.confidence_level}</span>
+                                <span class="match-type-badge">${match.match_type}</span>
+                            </div>
+                        </div>
+                        <div class="match-score">
+                            <div class="score-circle ${match.confidence_level}">
+                                ${scorePercent}%
+                            </div>
+                            <div style="font-size: 0.85em; color: #718096;">Compatibility</div>
+                        </div>
+                    </div>
+
+                    ${match.match_type === 'bundled' ? renderBundleMetrics(match.bundle_metrics) : ''}
+
+                    <div class="match-content">
+                        <div class="opportunities-section">
+                            <div class="section-title">
+                                🏙️ Opportunities (${match.opportunities.length})
+                            </div>
+                            ${match.opportunities.map(opp => renderOpportunity(opp)).join('')}
+                        </div>
+
+                        <div class="funders-section">
+                            <div class="section-title">
+                                💰 Funders (${match.funders.length})
+                            </div>
+                            ${match.funders.map(funder => renderFunder(funder)).join('')}
+                        </div>
+                    </div>
+
+                    <div class="criteria-section">
+                        <div class="criteria-met">
+                            <h4>✅ Criteria Met (${match.criteria_met.length})</h4>
+                            <ul class="criteria-list">
+                                ${match.criteria_met.map(c => `<li>${formatCriteria(c)}</li>`).join('')}
+                            </ul>
+                        </div>
+                        ${match.criteria_warnings.length > 0 ? `
+                            <div class="criteria-warnings">
+                                <h4>⚠️ Warnings (${match.criteria_warnings.length})</h4>
+                                <ul class="criteria-list">
+                                    ${match.criteria_warnings.map(w => `<li>${w}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderBundleMetrics(metrics) {
+            return `
+                <div class="bundle-metrics">
+                    <h3>📊 Bundle Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-value">${formatCurrency(metrics.total_investment)}</div>
+                            <div class="metric-label">Total Investment</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">${metrics.blended_roi}%</div>
+                            <div class="metric-label">Blended ROI</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">${metrics.total_carbon_reduction}</div>
+                            <div class="metric-label">Tons CO₂/year</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">${metrics.project_count}</div>
+                            <div class="metric-label">Projects</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOpportunity(opp) {
+            return `
+                <div class="opportunity-item">
+                    <div class="item-header">
+                        <div class="city-name">${opp.city}, ${opp.country}</div>
+                        <div class="amount">${formatCurrency(opp.investment_amount)}</div>
+                    </div>
+                    <div class="item-details">
+                        <div class="detail-item">
+                            <div class="detail-value">${opp.roi}%</div>
+                            <div>ROI</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-value">${opp.carbon_reduction}</div>
+                            <div>Tons CO₂/yr</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-value">${formatSector(opp.sector)}</div>
+                            <div>Sector</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFunder(funder) {
+            return `
+                <div class="funder-item">
+                    <div class="item-header">
+                        <div class="city-name">${funder.research_id}</div>
+                        <div class="amount">${formatCurrency(funder.funding_available)}</div>
+                    </div>
+                    <div class="item-details">
+                        <div class="detail-item">
+                            <div class="detail-value">${funder.roi_expected}%</div>
+                            <div>Min ROI</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-value">${formatCurrency(funder.minimum_investment)}</div>
+                            <div>Min Investment</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-value">${formatSector(funder.sector_interest)}</div>
+                            <div>Interest</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Utility functions
+        function formatCurrency(amount) {
+            if (amount >= 1000000) {
+                return '$' + (amount / 1000000).toFixed(1) + 'M';
+            }
+            return '$' + (amount / 1000).toFixed(0) + 'K';
+        }
+
+        function formatSector(sector) {
+            return sector.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function formatCriteria(criteria) {
+            return criteria.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        // Event listeners
+        document.getElementById('filter-confidence').addEventListener('change', (e) => {
+            currentFilters.confidence = e.target.value;
+            renderMatches();
+        });
+
+        document.getElementById('filter-type').addEventListener('change', (e) => {
+            currentFilters.type = e.target.value;
+            renderMatches();
+        });
+
+        document.getElementById('filter-sort').addEventListener('change', (e) => {
+            currentFilters.sort = e.target.value;
+            renderMatches();
+        });
+
+        // Initial load
+        loadMatches();
+    </script>
+</body>
+</html>

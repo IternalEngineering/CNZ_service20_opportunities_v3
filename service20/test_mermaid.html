@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@9.4.3/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+    </script>
+</head>
+<body>
+    <h2>Test 1: Simple Graph</h2>
+    <div class="mermaid">
+graph LR
+    A[Node A] --> B[Node B]
+    B --> C[Node C]
+    </div>
+
+    <h2>Test 2: SQS Queue Architecture</h2>
+    <div class="mermaid">
+graph LR
+    API[API Manual Input]
+    Q1[investment queue]
+    Worker[Worker]
+
+    API --> Q1
+    Q1 --> Worker
+    </div>
+</body>
+</html>

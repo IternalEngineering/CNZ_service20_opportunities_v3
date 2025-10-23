@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python test_alert_system.py)",
+      "Bash(python -c \"from arize.otel.otel import Transport; print([t for t in Transport])\")",
+      "Bash(python test_arize_ax.py)",
+      "Bash(python research_funder_opportunity.py impact_investor --scope national --countries \"United States\" --sectors renewable_energy,solar_energy --min 1000000 --max 10000000)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
