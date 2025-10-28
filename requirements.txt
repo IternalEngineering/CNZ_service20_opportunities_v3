@@ -1,0 +1,116 @@
+# Python 3.11.8 Environment - Frozen Dependencies
+# Service 7 - Academic Paper Research with CrewAI and Arize Telemetry
+
+# FastAPI Web Framework
+fastapi==0.115.12
+uvicorn[standard]==0.29.0
+python-multipart==0.0.18
+starlette==0.46.2
+
+# Environment and Configuration
+python-dotenv==1.1.1
+python-decouple==3.8
+
+# Data Validation and Models
+pydantic==2.11.7
+pydantic-core==2.33.2
+pydantic-settings==2.10.1
+
+# AI/ML Core Libraries
+crewai==0.186.1
+crewai-tools==0.71.0
+langchain==0.3.27
+langchain-core==0.3.75
+langchain-community==0.3.29
+langchain-openai==0.2.14
+langchain-google-genai==2.0.10
+langchain-text-splitters==0.3.11
+langsmith==0.3.45
+
+# LLM Providers
+openai==1.99.5
+google-generativeai==0.8.5
+google-ai-generativelanguage==0.6.15
+litellm==1.74.9
+anthropic==0.64.0
+
+# Search and Tools
+tavily-python==0.7.12
+duckduckgo-search==8.1.1
+
+# Database Connectors
+snowflake-connector-python==3.16.0
+sqlalchemy==2.0.43
+
+# Data Processing
+pandas==2.3.1
+numpy==2.2.5
+
+# Arize OpenTelemetry Instrumentation
+arize-otel==0.10.0
+openinference-instrumentation-crewai==0.1.12
+openinference-instrumentation-litellm==0.1.25
+openinference-instrumentation==0.1.38
+openinference-semantic-conventions==0.1.21
+
+# OpenTelemetry Core
+opentelemetry-api==1.37.0
+opentelemetry-sdk==1.37.0
+opentelemetry-exporter-otlp==1.37.0
+opentelemetry-exporter-otlp-proto-grpc==1.37.0
+opentelemetry-instrumentation==0.58b0
+opentelemetry-instrumentation-fastapi==0.58b0
+opentelemetry-instrumentation-requests==0.58b0
+opentelemetry-semantic-conventions==0.58b0
+
+# HTTP Clients
+requests==2.32.5
+httpx==0.28.1
+httpcore==1.0.9
+aiohttp==3.12.15
+
+# Mapping and GeoJSON Libraries
+overpy==0.7
+geojson==3.1.0
+shapely==2.0.6
+aiolimiter==1.2.1
+
+# Authentication and Security
+PyJWT==2.10.1
+cryptography==45.0.5
+bcrypt==4.3.0
+
+# Async Support
+anyio==4.10.0
+tenacity==9.1.2
+nest-asyncio==1.6.0
+
+# Utility Libraries
+click==8.2.1
+rich==13.9.4
+typer==0.17.3
+colorlog==6.9.0
+python-dateutil==2.9.0.post0
+pytz==2025.2
+pyyaml==6.0.2
+jinja2==3.1.6
+markupsafe==3.0.2
+cachetools==5.5.0
+
+# Langfuse Tracing
+langfuse==3.8.1
+
+# JSON and Data Handling
+orjson==3.11.2
+jsonschema==4.25.1
+jsonpatch==1.33
+
+# Development and Testing (Optional)
+# pytest==8.4.1
+# pytest-asyncio==1.1.0
+# pytest-cov==6.2.1
+
+# Note: Some packages are transitive dependencies included for completeness
+# Core runtime requirements are marked above
+# Python version: 3.11.8
+# Virtual environment: venv/
