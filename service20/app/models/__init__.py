@@ -7,11 +7,17 @@ from .schemas import (
     HealthResponse,
     ErrorResponse
 )
+from .research_schemas import (
+    CityResearchRequest,
+    ResearchJobResponse
+)
 
 __all__ = [
     "ChatQueryRequest",
     "InvestmentOpportunity",
     "ChatQueryResponse",
     "HealthResponse",
-    "ErrorResponse"
+    "ErrorResponse",
+    "CityResearchRequest",
+    "ResearchJobResponse"
 ]

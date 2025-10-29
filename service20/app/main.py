@@ -23,6 +23,7 @@ from .routes.funding import router as funding_router
 from .routes.matches import router as matches_router
 from .routes.alerts import router as alerts_router
 from .routes.bundles import router as bundles_router
+from .routes.research import router as research_router
 from .models import HealthResponse, ErrorResponse
 
 # Configure logging
@@ -66,6 +67,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"  - Docs: http://localhost:{settings.api_port}/docs")
     logger.info(f"  - Health: http://localhost:{settings.api_port}/health")
     logger.info(f"  - Endpoints:")
+    logger.info(f"    • POST /research/city - Trigger AI research for a city (NEW)")
     logger.info(f"    • POST /chat/query - Investment opportunities by city")
     logger.info(f"    • POST /funding/query - Funding opportunities")
     logger.info(f"    • GET  /matches/list - Opportunity matches")
@@ -205,6 +207,7 @@ async def root():
         "docs": "/docs",
         "health": "/health",
         "endpoints": {
+            "research_city": "/research/city",
             "chat_query": "/chat/query",
             "funding_query": "/funding/query",
             "matches_list": "/matches/list",
@@ -215,6 +218,7 @@ async def root():
 
 
 # Include routers
+app.include_router(research_router)  # NEW: Trigger AI research
 app.include_router(chat_router)
 app.include_router(funding_router)
 app.include_router(matches_router)

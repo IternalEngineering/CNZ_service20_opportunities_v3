@@ -56,11 +56,136 @@ curl -X GET "$BASE_URL/"
 
 ---
 
-## 2. Investment Opportunities (Chat Query)
+## 2. Trigger AI Research (NEW)
+
+### Trigger City Investment Opportunity Research
+
+**Runs the AI research agent** to generate a new comprehensive investment opportunity report for a city.
+
+This endpoint triggers the deep research agent in the background. The process takes 60-180 seconds and stores results in the database.
+
+**Basic Request:**
+```bash
+curl -X POST "$BASE_URL/research/city" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "city": "Paris",
+    "country_code": "FRA"
+  }'
+```
+
+**With Optional Parameters:**
+```bash
+curl -X POST "$BASE_URL/research/city" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "city": "Paris",
+    "country_code": "FRA",
+    "sector": "solar_energy",
+    "investment_range": "1000000-10000000"
+  }'
+```
+
+**More Examples:**
+```bash
+# London renewable energy research
+curl -X POST "$BASE_URL/research/city" \
+  -H "Content-Type: application/json" \
+  -d '{"city": "London", "country_code": "GBR"}'
+
+# Tokyo solar energy research with custom range
+curl -X POST "$BASE_URL/research/city" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "city": "Tokyo",
+    "country_code": "JPN",
+    "sector": "solar_energy",
+    "investment_range": "500000-5000000"
+  }'
+
+# New York wind energy research
+curl -X POST "$BASE_URL/research/city" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "city": "New York",
+    "country_code": "USA",
+    "sector": "wind_energy"
+  }'
+```
+
+**Success Response (202 Accepted):**
+```json
+{
+  "success": true,
+  "message": "Research job queued successfully for Paris, France (FRA)",
+  "job_id": "paris-fra-20251029-142030",
+  "status": "queued",
+  "estimated_duration_seconds": 120,
+  "query_endpoint": "/chat/query"
+}
+```
+
+**Available Sectors:**
+- `renewable_energy` (default)
+- `solar_energy`
+- `wind_energy`
+- `energy_storage`
+- `green_buildings`
+- `sustainable_transport`
+- `waste_management`
+- `water_management`
+
+**Process Flow:**
+```bash
+# 1. Trigger research (returns immediately)
+curl -X POST "$BASE_URL/research/city" \
+  -H "Content-Type: application/json" \
+  -d '{"city": "Paris", "country_code": "FRA"}'
+
+# Response:
+# {
+#   "success": true,
+#   "job_id": "paris-fra-20251029-142030",
+#   "status": "queued",
+#   "estimated_duration_seconds": 120
+# }
+
+# 2. Wait 2-3 minutes for AI agent to complete research
+
+# 3. Query results (see next section)
+curl -X POST "$BASE_URL/chat/query" \
+  -H "Content-Type: application/json" \
+  -d '{"city": "Paris", "country_code": "FRA"}'
+```
+
+**What the AI Agent Does:**
+- Performs web searches for city-specific Net Zero opportunities
+- Analyzes municipal programs and incentives
+- Generates 3-5 specific project proposals with financial projections
+- Calculates carbon reduction impact (tons CO2/year)
+- Assesses technical feasibility and timelines
+- Provides funding and partnership recommendations
+
+**Error Response (400 - Invalid Country):**
+```json
+{
+  "success": false,
+  "error": "InvalidCountryCode",
+  "message": "Invalid country code 'XXX'",
+  "details": {
+    "country_code": "XXX",
+    "supported_codes": ["USA", "GBR", "FRA", "DEU", ...]
+  }
+}
+```
+
+---
+
+## 3. Investment Opportunities (Chat Query)
 
 ### Query Latest Investment Opportunity by City
 
-Get the most recent investment research for a specific city and country.
+Get the most recent **cached** investment research for a specific city and country.
 
 **Basic Query:**
 ```bash
@@ -121,7 +246,7 @@ curl -X POST "$BASE_URL/chat/query" \
 
 ---
 
-## 3. Funding Opportunities
+## 4. Funding Opportunities
 
 ### Query Funding Opportunities with Filters
 
@@ -232,7 +357,7 @@ curl -X POST "$BASE_URL/funding/query" \
 
 ---
 
-## 4. Opportunity Matches
+## 5. Opportunity Matches
 
 ### List Opportunity Matches with Filters
 
@@ -331,7 +456,7 @@ curl -X GET "$BASE_URL/matches/list?match_type=bundled&status=proposed&limit=10"
 
 ---
 
-## 5. User Alerts
+## 6. User Alerts
 
 ### List User Alerts with Filters
 
@@ -416,7 +541,7 @@ curl -X GET "$BASE_URL/alerts/list?status=active&limit=50"
 
 ---
 
-## 6. Opportunity Bundles
+## 7. Opportunity Bundles
 
 ### List Opportunity Bundles with Filters
 
