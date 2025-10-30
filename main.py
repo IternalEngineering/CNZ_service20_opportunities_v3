@@ -64,8 +64,11 @@ agent_manager = AgentManager()
 # Import and include service15 routes
 from service15.routes import router as mapping_router
 from service15.routes.chat import router as chat_router
-from service15.routes.chat_crew import router as chat_crew_router
+# from service15.routes.chat_crew import router as chat_crew_router  # Disabled - has import errors
+from service15.routes.chat_haiku import router as chat_haiku_router
 from service15.routes.solar import router as solar_router
+# from service15.routes.async_crew import router as async_crew_router  # Disabled - has import errors
+from service15.routes.cache import router as cache_router
 app.include_router(
     mapping_router,
     prefix="/api/mapping",
@@ -76,15 +79,30 @@ app.include_router(
     prefix="/api/mapping",
     tags=["mapping-chat"]
 )
-app.include_router(
-    chat_crew_router,
-    prefix="/api/mapping",
-    tags=["mapping-chat-crew"]
-)
+# app.include_router(
+#     chat_crew_router,
+#     prefix="/api/mapping",
+#     tags=["mapping-chat-crew"]
+# )
 app.include_router(
     solar_router,
     prefix="/api/solar",
     tags=["solar"]
+)
+# app.include_router(
+#     async_crew_router,
+#     prefix="/api/mapping/async",
+#     tags=["async-mapping"]
+# )
+app.include_router(
+    cache_router,
+    prefix="/api/mapping/cache",
+    tags=["cache"]
+)
+app.include_router(
+    chat_haiku_router,
+    prefix="/api/mapping",
+    tags=["mapping-chat-haiku"]
 )
 
 # Request/Response models
